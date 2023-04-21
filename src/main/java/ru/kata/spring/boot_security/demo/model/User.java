@@ -1,74 +1,139 @@
 package ru.kata.spring.boot_security.demo.model;
 
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import javax.persistence.*;
 import javax.validation.constraints.*;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Entity
-@Table(name = "users")
+@Table(name = "user_table")
 public class User implements UserDetails {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
-    @Column(name = "first_name", nullable = false)
-    @Size(min = 2, max = 15, message = "Name must be min 2 symbols")
+    @Column(name = "id", nullable = false)
+    private Long id;
+    @Column(name = "name")
     @NotBlank(message = "Name should not be empty")
-    @Pattern(regexp = "^[A-Za-zА-Яа-яЁё]{2,15}$")
-    private String firstName;
-    @Column(name = "last_name", nullable = false)
-    @Size(min = 2, max = 25, message = "Last Name must be min 2 symbols")
-    @NotBlank(message = "Last Name should not be empty")
-    @Pattern(regexp = "^[A-Za-zА-Яа-яЁё]{2,25}$")
+    @Size(min = 2, max = 15, message = "Поле должно содержать от 2 до 15 символов")
+    private String name;
+    @Column(name = "last_name")
+    @NotBlank(message = "Last name should not be empty")
+    @Size(min = 2, max = 25, message = "Поле должно содержать от 2 до 25 символов")
     private String lastName;
-    @Column(name = "age", nullable = false)
+    @Column(name = "age")
     @NotNull(message = "Age should not be empty")
     @Min(value = 18, message = "must be greater than 17")
     @Max(value = 100, message = "must be less than 101")
     private int age;
-    @Column(name = "email", nullable = false, unique = true)
-    @Size(min = 7, max = 40, message = "Email must be min 7 symbols")
-    @Email
-    private String email;
-    @Column(name = "password", nullable = false)
+    @Column(name = "password")
     @NotBlank(message = "Password should not be empty")
-    //@Size(min = 4, max = 50, message = "Password must be min 4 symbols")
-    //@Pattern(regexp = "^[a-zA-Z0-9]+$")
     private String password;
 
-    @ManyToMany
-    private Set<Role> roles = new HashSet<>();
+    @Column(name = "email", unique = true)
+    @Email
+    @NotEmpty(message = "Email can't be empty")
+    private String email;
 
-    public User() {
-    }
+    @ManyToMany(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "users_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles;
 
-    public User(String firstName, String lastName, int age, String email, String password, Set<Role> roles) {
-        this.firstName = firstName;
+    public User() {}
+
+    public User(String name, String lastName, int age, String email) {
+        this.name = name;
         this.lastName = lastName;
         this.age = age;
+        this.email = email;
+    }
+
+    public User(String email, String password, Set<Role> roles) {
         this.email = email;
         this.password = password;
         this.roles = roles;
     }
 
-    public int getId() {
+    public User(String name, String lastName, int age, String password, String email) {
+        this.name = name;
+        this.lastName = lastName;
+        this.age = age;
+        this.password = password;
+        this.email = email;
+    }
+
+    public User(String name, String lastName, int age, String password, String email, Set<Role> roles) {
+        this.name = name;
+        this.lastName = lastName;
+        this.age = age;
+        this.password = password;
+        this.email = email;
+        this.roles = roles;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return false;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return false;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return false;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return false;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return getRoles();
+    }
+    public String getPassword() {
+        return password;
+    }
+
+    @Override
+    public String getUsername() {
+        return email;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public Set<Role> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
+    }
+
+    public Long getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public String getFirstName() {
-        return firstName;
+    public String getName() {
+        return name;
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getLastName() {
@@ -95,55 +160,29 @@ public class User implements UserDetails {
         this.email = email;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-
-    public Set<Role> getRoles() {
-        return roles;
-    }
-
-    public void setRoles(Set<Role> roles) {
-        this.roles = roles;
-    }
-
-    public String getShortRole() {
-        return roles.toString().substring(1, roles.toString().length() - 1);
+    @Override
+    public String toString() {
+        return "User{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", age=" + age +
+                ", password='" + password + '\'' +
+                ", email='" + email + '\'' +
+                ", roles=" + roles +
+                '}';
     }
 
     @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roles.stream().map(role -> new SimpleGrantedAuthority(role.getRole())).collect(Collectors.toList());
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return age == user.age && Objects.equals(id, user.id) && Objects.equals(name, user.name) && Objects.equals(lastName, user.lastName) && Objects.equals(password, user.password) && Objects.equals(email, user.email) && Objects.equals(roles, user.roles);
     }
 
     @Override
-    public String getPassword() {
-        return password;
-    }
-
-    @Override
-    public String getUsername() {
-        return email;
-    }
-
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return true;
+    public int hashCode() {
+        return Objects.hash(id, name, lastName, age, password, email, roles);
     }
 }
