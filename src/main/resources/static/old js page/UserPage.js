@@ -1,6 +1,6 @@
 const data = document.getElementById("data-user");
 const url = 'http://localhost:8088/api/viewUser';
-const panel = document.getElementById("user-panel");
+const panel = document.getElementById("user");
 
 function userAuthInfo() {
     fetch(url)
